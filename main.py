@@ -47,6 +47,15 @@ st.markdown("""
     /* Ajuste do Título e Status dentro do Card */
     .lead-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 2px; }
     .lead-status { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+    
+    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
+    .btn-zap {
+        background-color: #25D366; color: white !important; padding: 10px;
+        border-radius: 8px; text-decoration: none; font-weight: bold;
+        display: flex; align-items: center; justify-content: center; width: 100%;
+        transition: 0.3s; margin-bottom: 5px;
+    }
+    .btn-zap:hover { background-color: #128C7E; transform: scale(1.02); }
     </style>
 """, unsafe_allow_html=True)
 

@@ -92,7 +92,6 @@ if aba == "➕ Novo Lead":
             if nome and tel:
                 if salvar_lead_rest(nome, tel, stts, notas):
                     st.success(f"Lead {nome} cadastrado com sucesso!")
-                    st.balloons()
                 else:
                     st.error("Erro ao salvar. Verifique as regras do Firebase.")
             else:

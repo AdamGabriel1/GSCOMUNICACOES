@@ -15,14 +15,38 @@ st.set_page_config(page_title="GS COMUNICAÇÕES | CRM", page_icon="📞", layou
 st.markdown("""
     <style>
     .main { background-color: #f0f2f6; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
-    .btn-zap {
-        background-color: #25D366; color: white !important; padding: 10px;
-        border-radius: 8px; text-decoration: none; font-weight: bold;
-        display: flex; align-items: center; justify-content: center; width: 100%;
-        transition: 0.3s; margin-bottom: 5px;
+    
+    /* Base do Card */
+    .lead-card {
+        padding: 15px 20px;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        border-left: 10px solid #ccc;
+        box-shadow: 0px 4px 6px rgba(0,0,0,0.05);
+        color: #1e293b; /* Cor do texto */
     }
-    .btn-zap:hover { background-color: #128C7E; transform: scale(1.02); }
+
+    /* Estilização por Status - Fundo e Borda */
+    .status-urgente { 
+        background-color: #ffebee !important; 
+        border-left-color: #ef4444 !important; 
+    }
+    .status-negociacao { 
+        background-color: #fff7ed !important; 
+        border-left-color: #f59e0b !important; 
+    }
+    .status-pendente { 
+        background-color: #f0f9ff !important; 
+        border-left-color: #0ea5e9 !important; 
+    }
+    .status-finalizado { 
+        background-color: #f0fdf4 !important; 
+        border-left-color: #22c55e !important; 
+    }
+
+    /* Ajuste do Título e Status dentro do Card */
+    .lead-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 2px; }
+    .lead-status { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -110,8 +134,29 @@ elif aba == "📊 Painel Geral":
 
         for lead in dados:
             # Lógica de Filtro
+            # --- Dentro do loop de leads no Painel Geral ---
             if lead['status'] in status_filtro and (busca.lower() in lead['nome'].lower()):
-                with st.expander(f"👤 {lead['nome']} | {lead['status']}"):
+                
+                # Define a classe CSS baseada no status
+                classes = {
+                    "Urgente": "status-urgente",
+                    "Em Negociação": "status-negociacao",
+                    "Finalizado": "status-finalizado",
+                    "Pendente": "status-pendente"
+                }
+                classe_atual = classes.get(lead['status'], "status-pendente")
+                icone = "🔥" if lead['status'] == "Urgente" else "👤"
+
+                # Renderiza o Card Colorido
+                st.markdown(f"""
+                    <div class="lead-card {classe_atual}">
+                        <div class="lead-title">{icone} {lead['nome']}</div>
+                        <div class="lead-status">{lead['status']}</div>
+                    </div>
+                """, unsafe_allow_html=True)
+
+                # O expander vem logo abaixo para as ações
+                with st.expander("Ver detalhes e gerenciar"):
                     c1, c2, c3 = st.columns([2, 1.5, 1])
                     
                     with c1:

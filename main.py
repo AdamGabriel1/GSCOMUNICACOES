@@ -59,6 +59,59 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- CONFIGURAÇÃO DE SESSÃO (LOGIN) ---
+if "autenticado" not in st.session_state:
+    st.session_state.autenticado = False
+    st.session_state.usuario = None
+
+# --- FUNÇÃO DE LOGIN (EXEMPLO VIA FIRESTORE) ---
+def realizar_login(email, senha):
+    # Aqui você faria uma busca na coleção "usuarios" do Firestore
+    # Por enquanto, usaremos um validador simples para teste:
+    if email == "admin@gs.com" and senha == "123":
+        st.session_state.autenticado = True
+        st.session_state.usuario = {
+            "nome": "Adam",
+            "nivel": "admin",
+            "empresa_id": "gs_comunicacoes",
+            "id": "vendedor_01"
+        }
+        return True
+    return False
+
+# --- INTERFACE DE LOGIN ---
+if not st.session_state.autenticado:
+    st.title("🔐 Acesso ao CRM GS")
+    with st.form("login"):
+        email = st.text_input("E-mail")
+        senha = st.text_input("Senha", type="password")
+        if st.form_submit_button("Entrar"):
+            if realizar_login(email, senha):
+                st.rerun()
+            else:
+                st.error("Usuário ou senha inválidos")
+    st.stop() # Interrompe o código aqui se não estiver logado
+
+# --- SE CHEGOU AQUI, ESTÁ LOGADO ---
+u = st.session_state.usuario
+
+# --- FILTRAGEM DE DADOS POR USUÁRIO ---
+def buscar_dados_filtrados():
+    todos_dados = buscar_dados_rest() # Sua função original
+    
+    df = pd.DataFrame(todos_dados)
+    if df.empty: return []
+
+    # Se for VENDEDOR, filtra apenas os dele
+    if u['nivel'] == 'vendedor':
+        return df[df['vendedor_id'] == u['id']].to_dict('records')
+    
+    # Se for ADMIN da empresa, vê tudo da empresa dele
+    elif u['nivel'] == 'admin':
+        return df[df['empresa_id'] == u['empresa_id']].to_dict('records')
+    
+    return todos_dados
+
 # --- FUNÇÕES DE COMUNICAÇÃO (REST) ---
 def buscar_dados_rest():
     try:

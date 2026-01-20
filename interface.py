@@ -4,58 +4,6 @@ import urllib.parse
 from database import buscar_leads_filtrados, eliminar_documento, salvar_no_firebase, atualizar_status_rest
 from database import buscar_todos_usuarios, buscar_todas_empresas, resetar_senha_usuario
 
-def exibir_estatisticas():
-    st.header("📈 Relatórios de Desempenho")
-    u = st.session_state.user_data
-    leads = buscar_leads_filtrados(u)
-    
-    if not leads:
-        st.info("Dados insuficientes para gerar relatórios.")
-        return
-
-    df = pd.DataFrame(leads)
-    
-    # --- MÉTRICAS PRINCIPAIS (Cards Escuros) ---
-    m1, m2, m3 = st.columns(3)
-    total = len(df)
-    finalizados = len(df[df['status'] == 'Finalizado'])
-    taxa = (finalizados / total * 100) if total > 0 else 0
-    
-    m1.metric("Total de Leads", total)
-    m2.metric("Ativos", len(df[df['status'] != 'Finalizado']))
-    m3.metric("Conversão", f"{taxa:.1f}%")
-
-    st.divider()
-
-    # --- GRÁFICO DE EVOLUÇÃO SEMANAL ---
-    st.subheader("📊 Evolução de Novos Leads (Últimos 7 dias)")
-    
-    try:
-        # 1. Converter coluna para datetime
-        df['data_criacao'] = pd.to_datetime(df['data_criacao'])
-        
-        # 2. Normalizar para pegar apenas a data (sem hora)
-        df['data_apenas'] = df['data_criacao'].dt.date
-        
-        # 3. Agrupar e contar leads por dia
-        evolucao = df.groupby('data_apenas').size().reset_index(name='Quantidade')
-        evolucao = evolucao.sort_values('data_apenas').tail(7) # Pega os últimos 7 dias com dados
-        
-        # 4. Configurar índice para o gráfico
-        evolucao = evolucao.set_index('data_apenas')
-        
-        # 5. Exibir gráfico de área (mais bonito que o de linha comum)
-        st.area_chart(evolucao, color="#0ea5e9") 
-        
-    except Exception as e:
-        st.error("Não foi possível processar o gráfico de evolução. Verifique o formato das datas.")
-
-    st.divider()
-
-    # --- DISTRIBUIÇÃO POR STATUS ---
-    st.subheader("📋 Volume por Status")
-    st.bar_chart(df['status'].value_counts(), color="#25D366")
-
 def exibir_painel_admin():
     u_logado = st.session_state.user_data
     st.header("👑 Painel de Administração")
@@ -240,3 +188,58 @@ def exibir_novo_lead():
             else:
                 st.warning("Por favor, preencha Nome e Telefone.")
 
+def exibir_estatisticas():
+    st.header("📈 Relatórios de Desempenho")
+    u = st.session_state.user_data
+    leads = buscar_leads_filtrados(u)
+    
+    if not leads:
+        st.info("Dados insuficientes para gerar relatórios.")
+        return
+
+    df = pd.DataFrame(leads)
+    
+    # --- TRATAMENTO DE DATAS PARA O GRÁFICO ---
+    # Converte a string do Firebase para objeto datetime do Python
+    df['data_criacao'] = pd.to_datetime(df['data_criacao'])
+    # Cria uma coluna apenas com a data (sem hora) para agrupar
+    df['data_dia'] = df['data_criacao'].dt.date
+
+    # Métricas Principais (Com o estilo cinza escuro que configuramos no main.py)
+    m1, m2, m3 = st.columns(3)
+    total = len(df)
+    finalizados = len(df[df['status'] == 'Finalizado'])
+    taxa = (finalizados / total * 100) if total > 0 else 0
+    
+    m1.metric("Total de Leads", total)
+    m2.metric("Ativos", len(df[df['status'] != 'Finalizado']))
+    m3.metric("Conversão", f"{taxa:.1f}%")
+
+    st.divider()
+
+    # --- NOVO: GRÁFICO DE EVOLUÇÃO SEMANAL ---
+    st.subheader("📅 Evolução de Novos Leads (Últimos 7 dias)")
+    
+    # Agrupa por dia e conta quantos leads entraram
+    evolucao_diaria = df.groupby('data_dia').size().reset_index(name='Quantidade')
+    evolucao_diaria = evolucao_diaria.sort_values('data_dia').tail(7) # Pega os últimos 7 dias com dados
+    
+    # Configura o gráfico de linha
+    st.line_chart(evolucao_diaria.set_index('data_dia'), color="#0ea5e9")
+
+    st.divider()
+
+    # Gráficos de Distribuição
+    g1, g2 = st.columns(2)
+    with g1:
+        st.subheader("📊 Distribuição por Status")
+        st.bar_chart(df['status'].value_counts(), color="#25D366")
+    
+    with g2:
+        st.subheader("👥 Leads por Vendedor")
+        st.bar_chart(df['vendedor_id'].value_counts(), color="#0ea5e9")
+
+    # Opção de download
+    st.divider()
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("📥 Baixar Base de Dados (CSV)", csv, "leads_gs.csv", "text/csv", use_container_width=True)

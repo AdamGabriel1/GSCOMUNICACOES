@@ -3,7 +3,7 @@ import pandas as pd
 import urllib.parse
 from database import buscar_leads_filtrados, eliminar_documento, salvar_no_firebase, atualizar_status_rest
 from database import buscar_todos_usuarios, buscar_todas_empresas, resetar_senha_usuario
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 
 def exibir_painel_admin():
     u_logado = st.session_state.user_data
@@ -27,6 +27,12 @@ def exibir_painel_admin():
                             if eliminar_documento("empresas", emp['id']):
                                 st.success(f"Empresa {emp['razao']} removida!")
                                 st.rerun()
+                with st.expander("Ações Avançadas"):
+                    motivo = st.selectbox("Motivo da Desistência", ["Preço", "Concorrência", "Não responde", "Outros"], key=f"mot_{lead['id']}")
+                    if st.button("❌ Marcar como Perdido", key=f"btn_lost_{lead['id']}"):
+                        if registrar_perda_lead(lead['id'], motivo):
+                            st.warning("Lead arquivado como perdido.")
+                            st.rerun()
         st.divider()
 
     # --- SEÇÃO 2: GESTÃO DE FUNCIONÁRIOS ---
@@ -39,6 +45,12 @@ def exibir_painel_admin():
             status_cor = "🔵" if user['nivel'] == 'admin' else "🟢"
             with st.expander(f"{status_cor} {user['nome']} - {user['email']}"):
                 c1, c2 = st.columns([2, 2])
+            with st.expander("Ações Avançadas"):
+                motivo = st.selectbox("Motivo da Desistência", ["Preço", "Concorrência", "Não responde", "Outros"], key=f"mot_{lead['id']}")
+                if st.button("❌ Marcar como Perdido", key=f"btn_lost_{lead['id']}"):
+                    if registrar_perda_lead(lead['id'], motivo):
+                        st.warning("Lead arquivado como perdido.")
+                        st.rerun()
                 
                 with c1:
                     st.write(f"**Nível:** {user['nivel'].upper()}")
@@ -120,20 +132,30 @@ def exibir_painel_geral():
             }.get(lead['status'], "status-pendente")
             
             icone = "🔥" if lead['status'] == "Urgente" else "👤"
+            
+            # Dentro do loop de leads na interface.py
+            temp_icone, temp_cor = calcular_temperatura(lead['data_criacao'])
 
-            # Renderização do Card (HTML definido no main.py)
             st.markdown(f"""
-                <div class="lead-card {cor_classe}">
-                    <div style="font-size: 1.2rem; font-weight: bold;">{icone} {lead['nome']}</div>
-                    <div style="font-size: 0.85rem; text-transform: uppercase; font-weight: 600; opacity: 0.8;">
-                        {lead['status']} | Responsável: {lead.get('vendedor_id', 'N/A')}
+                <div class="lead-card {cor_classe}" style="border-right: 5px solid {temp_cor}">
+                    <div style="display: flex; justify-content: space-between;">
+                        <span style="font-size: 1.2rem; font-weight: bold;">{temp_icone} {lead['nome']}</span>
+                        <span style="font-size: 0.8rem; background: #262730; padding: 2px 8px; border-radius: 5px; color: white;">
+                            ID: {lead['id'][:5]}
+                        </span>
                     </div>
                 </div>
             """, unsafe_allow_html=True)
-
+            
             # Detalhes e Ações
             with st.expander("Ver Detalhes e Ações"):
                 col1, col2, col3 = st.columns([2, 1.5, 1])
+            with st.expander("Ações Avançadas"):
+                motivo = st.selectbox("Motivo da Desistência", ["Preço", "Concorrência", "Não responde", "Outros"], key=f"mot_{lead['id']}")
+                if st.button("❌ Marcar como Perdido", key=f"btn_lost_{lead['id']}"):
+                    if registrar_perda_lead(lead['id'], motivo):
+                        st.warning("Lead arquivado como perdido.")
+                        st.rerun()
                 
                 with col1:
                     st.write(f"**WhatsApp:** {lead['telefone']}")
@@ -260,6 +282,24 @@ def exibir_estatisticas():
     with g2:
         st.subheader("👥 Performance por Vendedor")
         st.bar_chart(df['vendedor_id'].value_counts(), color="#0ea5e9")
+        
+    df = pd.DataFrame(leads)
+    
+    # --- RANKING DE VELOCIDADE (Gamificação) ---
+    st.subheader("🏆 Ranking de Atividade (Vendedores)")
+    # Conta quantos leads cada vendedor moveu de 'Pendente' para outro status
+    ranking = df['vendedor_id'].value_counts().reset_index()
+    ranking.columns = ['Vendedor', 'Atendimentos']
+    st.table(ranking) # Exibe uma tabela simples e direta
+
+    # --- RELATÓRIO DE MOTIVOS DE PERDA ---
+    if 'motivo_perda' in df.columns:
+        st.subheader("📉 Por que estamos perdendo vendas?")
+        perdas = df[df['status'] == "Perdido"]['motivo_perda'].value_counts()
+        if not perdas.empty:
+            st.plotly_chart(px.pie(values=perdas.values, names=perdas.index, hole=.3)) # Exige 'import plotly.express as px'
+        else:
+            st.info("Ainda não há registros de perdas detalhadas.")
 
     # Opção de download dos dados filtrados
     st.divider()
@@ -271,3 +311,27 @@ def exibir_estatisticas():
         mime="text/csv",
         use_container_width=True
     )
+
+def calcular_temperatura(data_criacao):
+    """Retorna o ícone e a cor baseada na idade do lead"""
+    agora = datetime.now(timezone.utc)
+    data_c = pd.to_datetime(data_criacao)
+    diff = agora - data_c
+
+    if diff < timedelta(hours=2): return "🔥", "#ff4b4b"  # Quente (2h)
+    if diff < timedelta(hours=24): return "⚡", "#ffa500" # Morno (24h)
+    return "❄️", "#00f2ff"                               # Gelado (>24h)
+
+def exibir_alertas_e_agendamentos(leads):
+    """Exibe avisos no topo do Painel Geral"""
+    agora = datetime.now(timezone.utc).date()
+    leads_atrasados = 0
+    
+    for l in leads:
+        if l['status'] == "Pendente":
+            data_c = pd.to_datetime(l['data_criacao']).date()
+            if (agora - data_c).days >= 1:
+                leads_atrasados += 1
+                
+    if leads_atrasados > 0:
+        st.error(f"🚨 **Alerta de Leads Parados:** Você tem {leads_atrasados} leads pendentes há mais de 24h!")

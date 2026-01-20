@@ -9,8 +9,7 @@ from services.database import (
     atualizar_status_rest,
     buscar_todos_usuarios, 
     buscar_todas_empresas, 
-    resetar_senha_usuario, 
-    registrar_perda_lead
+    resetar_senha_usuario
 )
 
 def exibir_painel_admin():
@@ -61,7 +60,7 @@ def exibir_painel_admin():
                     nova_senha = st.text_input("Nova Senha", type="password", key=f"pw_{user['id']}")
                     if st.button("Confirmar Nova Senha", key=f"btn_pw_{user['id']}"):
                         if nova_senha:
-                            from security import criptografar_senha
+                            from core.security import criptografar_senha
                             senha_hash = criptografar_senha(nova_senha)
                             if resetar_senha_usuario(user['id'], senha_hash):
                                 st.success("Senha atualizada com segurança!")

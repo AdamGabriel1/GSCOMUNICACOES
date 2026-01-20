@@ -106,3 +106,36 @@ def buscar_leads_filtrados(user_data):
     except Exception as e:
         print(f"Erro ao carregar leads: {e}")
         return []
+        
+def buscar_todos_usuarios(user_data):
+    """Busca usuários dependendo do nível de acesso"""
+    url = f"{BASE_URL}/usuarios"
+    res = requests.get(url)
+    usuarios = []
+    if res.status_code == 200:
+        docs = res.json().get('documents', [])
+        for doc in docs:
+            f = doc.get('fields', {})
+            u = {k: list(v.values())[0] for k, v in f.items()}
+            u['id'] = doc['name'].split('/')[-1]
+            
+            # Super Admin vê todos / Admin vê apenas os da sua empresa
+            if user_data['nivel'] == 'super':
+                usuarios.append(u)
+            elif user_data['nivel'] == 'admin' and u.get('empresa_id') == user_data['empresa_id']:
+                usuarios.append(u)
+    return usuarios
+
+def buscar_todas_empresas():
+    """Busca todas as empresas cadastradas (Apenas para Super Admin)"""
+    url = f"{BASE_URL}/empresas"
+    res = requests.get(url)
+    empresas = []
+    if res.status_code == 200:
+        docs = res.json().get('documents', [])
+        for doc in docs:
+            f = doc.get('fields', {})
+            e = {k: list(v.values())[0] for k, v in f.items()}
+            e['id'] = doc['name'].split('/')[-1]
+            empresas.append(e)
+    return empresas

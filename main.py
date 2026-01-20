@@ -95,12 +95,13 @@ if st.session_state.autenticado:
     # Roteamento das Abas (chama funções da interface.py)
     if aba_selecionada == "📊 Painel Geral":
         exibir_painel_geral()
-        
     elif aba_selecionada == "➕ Novo Lead":
         exibir_novo_lead()
-        
     elif aba_selecionada == "📈 Estatísticas":
         exibir_estatisticas()
+    elif aba_selecionada == "👑 Administração":
+        from interface import exibir_painel_admin # Garanta a importação
+        exibir_painel_admin()
 
     # Rodapé discreto
     st.sidebar.markdown("---")

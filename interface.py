@@ -2,6 +2,46 @@ import streamlit as st
 import pandas as pd
 import urllib.parse
 from database import buscar_leads_filtrados, eliminar_documento, salvar_no_firebase, atualizar_status_rest
+from database import buscar_todos_usuarios, buscar_todas_empresas, eliminar_documento
+
+def exibir_painel_admin():
+    u_logado = st.session_state.user_data
+    st.header("👑 Painel de Administração")
+
+    # --- SEÇÃO 1: GESTÃO DE EMPRESAS (Apenas Super Admin) ---
+    if u_logado['nivel'] == 'super':
+        st.subheader("🏢 Empresas Cadastradas")
+        empresas = buscar_todas_empresas()
+        if empresas:
+            df_emp = pd.DataFrame(empresas)
+            st.dataframe(df_emp[['id_empresa', 'razao', 'cnpj']], use_container_width=True)
+        else:
+            st.info("Nenhuma empresa cadastrada.")
+        st.divider()
+
+    # --- SEÇÃO 2: GESTÃO DE FUNCIONÁRIOS ---
+    st.subheader("👥 Funcionários / Usuários")
+    usuarios = buscar_todos_usuarios(u_logado)
+    
+    if usuarios:
+        for user in usuarios:
+            # Não permite que o admin se exclua ou veja a própria senha de forma exposta aqui
+            with st.expander(f"👤 {user['nome']} ({user['nivel'].upper()})"):
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.write(f"**E-mail:** {user['email']}")
+                    st.write(f"**Empresa:** {user['empresa_id']}")
+                    st.write(f"**Senha:** `{'*' * len(user['senha'])}` (Protegida)")
+                
+                with col2:
+                    # Impede excluir o Super Admin principal
+                    if user['email'] != "admin@gs.com":
+                        if st.button("Remover Acesso", key=f"del_user_{user['id']}"):
+                            if eliminar_documento("usuarios", user['id']):
+                                st.success("Usuário removido!")
+                                st.rerun()
+    else:
+        st.info("Nenhum funcionário cadastrado.")
 
 def renderizar_sidebar():
     """Renderiza a barra lateral e retorna a aba selecionada"""
@@ -16,6 +56,11 @@ def renderizar_sidebar():
     st.sidebar.divider()
     
     menu = ["📊 Painel Geral", "➕ Novo Lead", "📈 Estatísticas"]
+    
+    # Adiciona a aba Admin apenas para quem tem permissão
+    if u['nivel'] in ['super', 'admin']:
+        menu.append("👑 Administração")
+        
     aba = st.sidebar.radio("Navegação", menu)
     
     st.sidebar.divider()

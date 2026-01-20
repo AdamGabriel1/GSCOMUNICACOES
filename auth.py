@@ -26,25 +26,14 @@ def tela_login():
         btn_login = st.form_submit_button("Entrar", use_container_width=True)
         
         if btn_login:
-            # 1. Verificação Hardcoded para Super Admin
-            if email == "admin@gs.com" and senha == "master123":
-                st.session_state.user_data = {
-                    "nome": "Super Admin", 
-                    "nivel": "super", 
-                    "empresa_id": "MASTER",
-                    "email": email
-                }
-                st.session_state.autenticado = True
-                st.rerun()
-            
-            # 2. Busca no Firebase para usuários comuns e admins de empresas
             user = buscar_documento("usuarios", "email", email)
+            
             if user and user.get("senha") == senha:
                 st.session_state.user_data = user
                 st.session_state.autenticado = True
                 st.rerun()
             else:
-                st.error("Usuário ou senha incorretos.")
+                st.error("E-mail ou senha incorretos.")
 
     st.markdown("---")
     if st.button("Não tem uma conta? Cadastre-se agora"):

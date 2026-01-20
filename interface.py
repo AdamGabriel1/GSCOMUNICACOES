@@ -4,6 +4,7 @@ import urllib.parse
 from database import buscar_leads_filtrados, eliminar_documento, salvar_no_firebase, atualizar_status_rest
 from database import buscar_todos_usuarios, buscar_todas_empresas, resetar_senha_usuario
 from datetime import datetime, timezone, timedelta
+import plotly.express as px
 
 def exibir_painel_admin():
     u_logado = st.session_state.user_data

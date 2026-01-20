@@ -4,6 +4,58 @@ import urllib.parse
 from database import buscar_leads_filtrados, eliminar_documento, salvar_no_firebase, atualizar_status_rest
 from database import buscar_todos_usuarios, buscar_todas_empresas, resetar_senha_usuario
 
+def exibir_estatisticas():
+    st.header("📈 Relatórios de Desempenho")
+    u = st.session_state.user_data
+    leads = buscar_leads_filtrados(u)
+    
+    if not leads:
+        st.info("Dados insuficientes para gerar relatórios.")
+        return
+
+    df = pd.DataFrame(leads)
+    
+    # --- MÉTRICAS PRINCIPAIS (Cards Escuros) ---
+    m1, m2, m3 = st.columns(3)
+    total = len(df)
+    finalizados = len(df[df['status'] == 'Finalizado'])
+    taxa = (finalizados / total * 100) if total > 0 else 0
+    
+    m1.metric("Total de Leads", total)
+    m2.metric("Ativos", len(df[df['status'] != 'Finalizado']))
+    m3.metric("Conversão", f"{taxa:.1f}%")
+
+    st.divider()
+
+    # --- GRÁFICO DE EVOLUÇÃO SEMANAL ---
+    st.subheader("📊 Evolução de Novos Leads (Últimos 7 dias)")
+    
+    try:
+        # 1. Converter coluna para datetime
+        df['data_criacao'] = pd.to_datetime(df['data_criacao'])
+        
+        # 2. Normalizar para pegar apenas a data (sem hora)
+        df['data_apenas'] = df['data_criacao'].dt.date
+        
+        # 3. Agrupar e contar leads por dia
+        evolucao = df.groupby('data_apenas').size().reset_index(name='Quantidade')
+        evolucao = evolucao.sort_values('data_apenas').tail(7) # Pega os últimos 7 dias com dados
+        
+        # 4. Configurar índice para o gráfico
+        evolucao = evolucao.set_index('data_apenas')
+        
+        # 5. Exibir gráfico de área (mais bonito que o de linha comum)
+        st.area_chart(evolucao, color="#0ea5e9") 
+        
+    except Exception as e:
+        st.error("Não foi possível processar o gráfico de evolução. Verifique o formato das datas.")
+
+    st.divider()
+
+    # --- DISTRIBUIÇÃO POR STATUS ---
+    st.subheader("📋 Volume por Status")
+    st.bar_chart(df['status'].value_counts(), color="#25D366")
+
 def exibir_painel_admin():
     u_logado = st.session_state.user_data
     st.header("👑 Painel de Administração")

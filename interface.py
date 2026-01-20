@@ -3,6 +3,7 @@ import pandas as pd
 import urllib.parse
 from database import buscar_leads_filtrados, eliminar_documento, salvar_no_firebase, atualizar_status_rest
 from database import buscar_todos_usuarios, buscar_todas_empresas, resetar_senha_usuario
+from datetime import datetime, timedelta
 
 def exibir_painel_admin():
     u_logado = st.session_state.user_data
@@ -197,15 +198,38 @@ def exibir_estatisticas():
         st.info("Dados insuficientes para gerar relatórios.")
         return
 
-    df = pd.DataFrame(leads)
-    
-    # --- TRATAMENTO DE DATAS PARA O GRÁFICO ---
-    # Converte a string do Firebase para objeto datetime do Python
-    df['data_criacao'] = pd.to_datetime(df['data_criacao'])
-    # Cria uma coluna apenas com a data (sem hora) para agrupar
-    df['data_dia'] = df['data_criacao'].dt.date
+    # Criar DataFrame inicial
+    df_completo = pd.DataFrame(leads)
+    df_completo['data_criacao'] = pd.to_datetime(df_completo['data_criacao'])
+    df_completo['data_dia'] = df_completo['data_criacao'].dt.date
 
-    # Métricas Principais (Com o estilo cinza escuro que configuramos no main.py)
+    # --- NOVO: FILTRO DE PERÍODO ---
+    col_filtro1, col_filtro2 = st.columns([1, 2])
+    with col_filtro1:
+        periodo = st.selectbox(
+            "Selecionar Período",
+            ["Hoje", "Últimos 7 Dias", "Últimos 30 Dias", "Todo o Período"],
+            index=3
+        )
+
+    # Lógica do Filtro de Data
+    hoje = datetime.now().date()
+    if periodo == "Hoje":
+        df = df_completo[df_completo['data_dia'] == hoje]
+    elif periodo == "Últimos 7 Dias":
+        data_limite = hoje - timedelta(days=7)
+        df = df_completo[df_completo['data_dia'] >= data_limite]
+    elif periodo == "Últimos 30 Dias":
+        data_limite = hoje - timedelta(days=30)
+        df = df_completo[df_completo['data_dia'] >= data_limite]
+    else:
+        df = df_completo
+
+    if df.empty:
+        st.warning(f"Não existem leads registados no período: {periodo}")
+        return
+
+    # --- MÉTRICAS (Com o estilo cinza escuro do main.py) ---
     m1, m2, m3 = st.columns(3)
     total = len(df)
     finalizados = len(df[df['status'] == 'Finalizado'])
@@ -217,29 +241,33 @@ def exibir_estatisticas():
 
     st.divider()
 
-    # --- NOVO: GRÁFICO DE EVOLUÇÃO SEMANAL ---
-    st.subheader("📅 Evolução de Novos Leads (Últimos 7 dias)")
-    
-    # Agrupa por dia e conta quantos leads entraram
+    # --- GRÁFICO DE EVOLUÇÃO ---
+    st.subheader(f"📅 Evolução - {periodo}")
     evolucao_diaria = df.groupby('data_dia').size().reset_index(name='Quantidade')
-    evolucao_diaria = evolucao_diaria.sort_values('data_dia').tail(7) # Pega os últimos 7 dias com dados
+    evolucao_diaria = evolucao_diaria.sort_values('data_dia')
     
-    # Configura o gráfico de linha
+    # Exibe o gráfico de linha (azul)
     st.line_chart(evolucao_diaria.set_index('data_dia'), color="#0ea5e9")
 
     st.divider()
 
-    # Gráficos de Distribuição
+    # --- DISTRIBUIÇÃO ---
     g1, g2 = st.columns(2)
     with g1:
-        st.subheader("📊 Distribuição por Status")
+        st.subheader("📊 Status")
         st.bar_chart(df['status'].value_counts(), color="#25D366")
     
     with g2:
-        st.subheader("👥 Leads por Vendedor")
+        st.subheader("👥 Performance por Vendedor")
         st.bar_chart(df['vendedor_id'].value_counts(), color="#0ea5e9")
 
-    # Opção de download
+    # Opção de download dos dados filtrados
     st.divider()
     csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button("📥 Baixar Base de Dados (CSV)", csv, "leads_gs.csv", "text/csv", use_container_width=True)
+    st.download_button(
+        label=f"📥 Baixar Relatório ({periodo})",
+        data=csv,
+        file_name=f"leads_gs_{periodo.lower().replace(' ', '_')}.csv",
+        mime="text/csv",
+        use_container_width=True
+    )

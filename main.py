@@ -130,7 +130,7 @@ if st.session_state.autenticado:
     elif aba_selecionada == "📈 Estatísticas":
         exibir_estatisticas()
     elif aba_selecionada == "👑 Administração":
-        from interface import exibir_painel_admin # Garanta a importação
+        from views.interface import exibir_painel_admin # Garanta a importação
         exibir_painel_admin()
 
     # Rodapé discreto

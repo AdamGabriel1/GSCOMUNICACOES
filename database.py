@@ -6,7 +6,7 @@ PROJECT_ID = "gscomunicacoes-91512"
 BASE_URL = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents"
 
 def buscar_documento(colecao, campo, valor):
-    """Busca um documento específico filtrando por um campo (Ex: login por email)"""
+    """Busca um documento específico em uma coleção filtrando por um campo"""
     url = f"{BASE_URL}/{colecao}"
     try:
         res = requests.get(url)
@@ -16,6 +16,7 @@ def buscar_documento(colecao, campo, valor):
                 f = doc.get('fields', {})
                 # Verifica se o valor do campo bate com o esperado
                 if f.get(campo, {}).get('stringValue') == valor:
+                    # Converte o formato complexo do Firebase em um dicionário simples
                     data = {k: list(v.values())[0] for k, v in f.items()}
                     data['id'] = doc['name'].split('/')[-1]
                     return data
@@ -25,14 +26,14 @@ def buscar_documento(colecao, campo, valor):
         return None
 
 def salvar_no_firebase(colecao, dados):
-    """Salva um novo documento garantindo o formato de timestamp para leads"""
+    """Salva um novo documento em qualquer coleção"""
     payload = {"fields": {}}
     
     for k, v in dados.items():
         payload["fields"][k] = {"stringValue": str(v)}
     
-    # IMPORTANTE: Grava data como timestampValue para permitir ordenação e gráficos
-    if colecao == "leads":
+    # Se for lead, garante o timestamp correto no formato do Google
+    if colecao == "leads" and "data_criacao" not in dados:
         data_utc = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
         payload["fields"]["data_criacao"] = {"timestampValue": data_utc}
         
@@ -44,9 +45,13 @@ def salvar_no_firebase(colecao, dados):
         return False
 
 def atualizar_status_rest(doc_id, novo_status):
-    """Atualiza apenas o campo 'status' via PATCH"""
+    """Atualiza apenas o campo 'status' de um lead específico"""
     url = f"{BASE_URL}/leads/{doc_id}?updateMask.fieldPaths=status"
-    payload = {"fields": {"status": {"stringValue": novo_status}}}
+    payload = {
+        "fields": {
+            "status": {"stringValue": novo_status}
+        }
+    }
     try:
         res = requests.patch(url, json=payload)
         return res.status_code == 200
@@ -54,24 +59,8 @@ def atualizar_status_rest(doc_id, novo_status):
         print(f"Erro ao atualizar status: {e}")
         return False
 
-def registrar_perda_lead(doc_id, motivo):
-    """Atualiza o status para 'Perdido' e registra o motivo da perda"""
-    url = f"{BASE_URL}/leads/{doc_id}?updateMask.fieldPaths=status,motivo_perda"
-    payload = {
-        "fields": {
-            "status": {"stringValue": "Perdido"},
-            "motivo_perda": {"stringValue": motivo}
-        }
-    }
-    try:
-        res = requests.patch(url, json=payload)
-        return res.status_code == 200
-    except Exception as e:
-        print(f"Erro ao registrar perda: {e}")
-        return False
-
 def eliminar_documento(colecao, doc_id):
-    """Remove um documento permanentemente"""
+    """Remove um documento do Firebase"""
     url = f"{BASE_URL}/{colecao}/{doc_id}"
     try:
         res = requests.delete(url)
@@ -81,72 +70,111 @@ def eliminar_documento(colecao, doc_id):
         return False
 
 def buscar_leads_filtrados(user_data):
-    """Busca leads aplicando multitenancy (segurança de dados por nível)"""
+    """Busca leads aplicando a lógica de hierarquia (SaaS/Multitenant)"""
     url = f"{BASE_URL}/leads"
     try:
         res = requests.get(url)
-        if res.status_code != 200: return []
+        if res.status_code != 200:
+            return []
             
         leads = []
         docs = res.json().get('documents', [])
         
         for doc in docs:
             f = doc.get('fields', {})
-            # Extração dinâmica de valores do Firestore
+            # Extração limpa dos campos
             l = {k: list(v.values())[0] for k, v in f.items()}
             l['id'] = doc['name'].split('/')[-1]
             
-            # Lógica de Hierarquia
+            empresa_id = l.get('empresa_id')
+            vendedor_id = l.get('vendedor_id')
+
+            # --- LÓGICA DE VISIBILIDADE ---
+            # 1. Super Admin vê absolutamente tudo
             if user_data['nivel'] == 'super':
                 leads.append(l)
-            elif user_data['nivel'] == 'admin' and l.get('empresa_id') == user_data['empresa_id']:
+            
+            # 2. Admin da Empresa vê todos os leads da sua empresa
+            elif user_data['nivel'] == 'admin' and empresa_id == user_data['empresa_id']:
                 leads.append(l)
-            elif user_data['nivel'] == 'vendedor' and l.get('vendedor_id') == user_data['email']:
+            
+            # 3. Vendedor vê apenas os leads que ele mesmo criou
+            elif user_data['nivel'] == 'vendedor' and vendedor_id == user_data['email']:
                 leads.append(l)
                 
         return leads
     except Exception as e:
         print(f"Erro ao carregar leads: {e}")
         return []
-
+        
 def buscar_todos_usuarios(user_data):
-    """Filtra usuários visíveis para o Admin logado"""
+    """Busca usuários dependendo do nível de acesso"""
     url = f"{BASE_URL}/usuarios"
-    try:
-        res = requests.get(url)
-        usuarios = []
-        if res.status_code == 200:
-            docs = res.json().get('documents', [])
-            for doc in docs:
-                f = doc.get('fields', {})
-                u = {k: list(v.values())[0] for k, v in f.items()}
-                u['id'] = doc['name'].split('/')[-1]
-                
-                if user_data['nivel'] == 'super' or (user_data['nivel'] == 'admin' and u.get('empresa_id') == user_data['empresa_id']):
-                    usuarios.append(u)
-        return usuarios
-    except: return []
+    res = requests.get(url)
+    usuarios = []
+    if res.status_code == 200:
+        docs = res.json().get('documents', [])
+        for doc in docs:
+            f = doc.get('fields', {})
+            u = {k: list(v.values())[0] for k, v in f.items()}
+            u['id'] = doc['name'].split('/')[-1]
+            
+            # Super Admin vê todos / Admin vê apenas os da sua empresa
+            if user_data['nivel'] == 'super':
+                usuarios.append(u)
+            elif user_data['nivel'] == 'admin' and u.get('empresa_id') == user_data['empresa_id']:
+                usuarios.append(u)
+    return usuarios
 
 def buscar_todas_empresas():
-    """Retorna lista de empresas (Acesso restrito Super Admin)"""
+    """Busca todas as empresas cadastradas (Apenas para Super Admin)"""
     url = f"{BASE_URL}/empresas"
-    try:
-        res = requests.get(url)
-        empresas = []
-        if res.status_code == 200:
-            docs = res.json().get('documents', [])
-            for doc in docs:
-                f = doc.get('fields', {})
-                e = {k: list(v.values())[0] for k, v in f.items()}
-                e['id'] = doc['name'].split('/')[-1]
-                empresas.append(e)
-        return empresas
-    except: return []
-
-def resetar_senha_usuario(user_id, nova_senha_hash):
-    """Sobrescreve o campo senha com o novo hash gerado"""
+    res = requests.get(url)
+    empresas = []
+    if res.status_code == 200:
+        docs = res.json().get('documents', [])
+        for doc in docs:
+            f = doc.get('fields', {})
+            e = {k: list(v.values())[0] for k, v in f.items()}
+            e['id'] = doc['name'].split('/')[-1]
+            empresas.append(e)
+    return empresas
+    
+def resetar_senha_usuario(user_id, nova_senha):
+    """Atualiza a senha de um usuário específico"""
     url = f"{BASE_URL}/usuarios/{user_id}?updateMask.fieldPaths=senha"
-    payload = {"fields": {"senha": {"stringValue": nova_senha_hash}}}
+    payload = {
+        "fields": {
+            "senha": {"stringValue": nova_senha}
+        }
+    }
     try:
-        return requests.patch(url, json=payload).status_code == 200
-    except: return False
+        res = requests.patch(url, json=payload)
+        return res.status_code == 200
+    except Exception as e:
+        print(f"Erro ao resetar senha: {e}")
+        return False
+
+def eliminar_empresa_completa(id_empresa_doc, id_empresa_slug):
+    """
+    Remove o registro da empresa. 
+    Nota: Em um sistema real, você também deletaria os leads vinculados a esse slug.
+    """
+    url = f"{BASE_URL}/empresas/{id_empresa_doc}"
+    try:
+        res = requests.delete(url)
+        return res.status_code == 200
+    except Exception as e:
+        print(f"Erro ao eliminar empresa: {e}")
+        return False
+        
+def registrar_perda_lead(doc_id, motivo):
+    """Atualiza o lead para status 'Perdido' e grava o motivo"""
+    url = f"{BASE_URL}/leads/{doc_id}?updateMask.fieldPaths=status,motivo_perda"
+    payload = {
+        "fields": {
+            "status": {"stringValue": "Perdido"},
+            "motivo_perda": {"stringValue": motivo}
+        }
+    }
+    return requests.patch(url, json=payload).status_code == 200

@@ -26,7 +26,7 @@ def tela_login():
         if st.form_submit_button("Entrar", use_container_width=True):
             user = buscar_documento("usuarios", "email", email)
             
-            # Verificação com Hash Seguro
+            # Aqui usamos a função de verificação
             if user and verificar_senha(senha, user.get("senha")):
                 st.session_state.user_data = user
                 st.session_state.autenticado = True
@@ -50,6 +50,7 @@ def tela_cadastro():
         id_empresa_pretendido = st.text_input("ID da Empresa", help="Ex: gs_telecom ou empresa_xyz")
         
         if st.form_submit_button("Verificar Empresa"):
+            senha_segura = criptografar_senha(senha)
             if not (nome and email and senha and id_empresa_pretendido):
                 st.warning("Preencha todos os campos.")
             else:
@@ -57,12 +58,11 @@ def tela_cadastro():
                 empresa = buscar_documento("empresas", "id_empresa", id_empresa_pretendido.lower())
                 
                 if empresa:
-                    # CASO 1: Empresa existe -> Cadastra como VENDEDOR com senha criptografada
-                    senha_segura = criptografar_senha(senha)
+                    # CASO 1: Empresa existe -> Cadastra como VENDEDOR
                     novo_user = {
                         "nome": nome,
                         "email": email,
-                        "senha": senha_segura,
+                        "senha": senha_segura, # Salva o HASH, não a senha real
                         "empresa_id": id_empresa_pretendido.lower(),
                         "nivel": "vendedor"
                     }
@@ -71,12 +71,10 @@ def tela_cadastro():
                         st.session_state.tela = "login"
                         st.rerun()
                 else:
-                    # CASO 2: Empresa não existe -> Armazena dados temporários e vai para registro de empresa
+                    # CASO 2: Empresa não existe -> Direciona para cadastro de empresa
                     st.session_state.temp_user = {
-                        "nome": nome, 
-                        "email": email, 
-                        "senha": senha, # Senha em texto puro apenas no estado temporário para ser hashada no final
-                        "id_empresa": id_empresa_pretendido.lower()
+                        "nome": nome, "email": email, 
+                        "senha": senha, "id_empresa": id_empresa_pretendido.lower()
                     }
                     st.session_state.tela = "cadastro_empresa"
                     st.rerun()
@@ -87,12 +85,8 @@ def tela_cadastro():
 
 def tela_cadastro_empresa():
     st.title("🏢 Registrar Nova Empresa")
-    if "temp_user" not in st.session_state:
-        st.session_state.tela = "login"
-        st.rerun()
-
     temp_u = st.session_state.temp_user
-    st.warning(f"O ID '{temp_u['id_empresa']}' é novo no sistema. Registre a empresa para ser o Administrador.")
+    st.warning(f"O ID '{temp_u['id_empresa']}' é novo. Para continuar, registre os dados da empresa.")
     
     with st.form("form_nova_empresa"):
         razao = st.text_input("Razão Social ou Nome Fantasia")
@@ -112,18 +106,17 @@ def tela_cadastro_empresa():
                 }
                 salvar_no_firebase("empresas", dados_empresa)
                 
-                # 2. Salva o Usuário como ADMIN (Criptografando a senha agora)
-                senha_hash = criptografar_senha(temp_u['senha'])
+                # 2. Salva o Usuário como ADMIN daquela empresa
                 novo_admin = {
                     "nome": temp_u['nome'],
                     "email": temp_u['email'],
-                    "senha": senha_hash,
+                    "senha": temp_u['senha'],
                     "empresa_id": temp_u['id_empresa'],
                     "nivel": "admin"
                 }
                 salvar_no_firebase("usuarios", novo_admin)
                 
-                st.success("🎉 Empresa e Administrador cadastrados com sucesso!")
+                st.success("Empresa e Administrador cadastrados com sucesso!")
                 st.session_state.tela = "login"
                 st.rerun()
 

@@ -1,23 +1,48 @@
 import streamlit as st
 import pandas as pd
 import urllib.parse
+from datetime import datetime, timezone
 from services.database import atualizar_status_rest, eliminar_documento
 
+def calcular_temperatura(data_criacao_str):
+    """Calcula a temperatura com base na idade do lead"""
+    try:
+        # Converte a string do Firebase para objeto datetime
+        data_criacao = pd.to_datetime(data_criacao_str).tz_localize(None)
+        agora = datetime.now()
+        diferenca = agora - data_criacao
+        horas = diferenca.total_seconds() / 3600
+
+        if horas <= 24:
+            return "🔥 Quente", "#ff4b4b" # Vermelho
+        elif horas <= 72:
+            return "🌤️ Morno", "#ffa500"  # Laranja
+        else:
+            return "❄️ Gelado", "#00f2ff" # Azul ciano
+    except:
+        return "⚪ Novo", "#ccc"
+
 def renderizar_card_lead(lead, status_opcoes):
-    # Definição de Cores
+    # Calcula temperatura
+    temp_label, temp_cor = calcular_temperatura(lead.get('data_criacao'))
+    
+    # Cores de status (Borda lateral)
     cor_classe = {
         "Urgente": "status-urgente",
         "Em Negociação": "status-negociacao",
         "Finalizado": "status-finalizado"
     }.get(lead['status'], "status-pendente")
-    
-    icone = "🔥" if lead['status'] == "Urgente" else "👤"
 
-    # Renderização visual
+    # Renderização visual com a temperatura
     st.markdown(f"""
         <div class="lead-card {cor_classe}">
-            <div style="font-size: 1.2rem; font-weight: bold;">{icone} {lead['nome']}</div>
-            <div style="font-size: 0.85rem; text-transform: uppercase; font-weight: 600; opacity: 0.8;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="font-size: 1.2rem; font-weight: bold;">👤 {lead['nome']}</div>
+                <div style="background: {temp_cor}22; color: {temp_cor}; padding: 2px 8px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; border: 1px solid {temp_cor};">
+                    {temp_label}
+                </div>
+            </div>
+            <div style="font-size: 0.85rem; text-transform: uppercase; font-weight: 600; opacity: 0.8; margin-top: 5px;">
                 {lead['status']} | Responsável: {lead.get('vendedor_id', 'N/A')}
             </div>
         </div>

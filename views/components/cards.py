@@ -68,29 +68,28 @@ def renderizar_card_lead(lead, status_opcoes):
                     st.rerun()
 
         with col3:
-            msg = f"Olá {lead['nome']}, aqui é da GS!"
+            # Botão WhatsApp
+            msg = f"Olá {lead['nome']}, aqui é da GS COMUNICAÇÕES!"
             link_zap = f"https://wa.me/{lead['telefone']}?text={urllib.parse.quote(msg)}"
             st.markdown(f'<a href="{link_zap}" target="_blank" class="btn-zap">WHATSAPP</a>', unsafe_allow_html=True)
             
-            st.divider()
-            
-            # Opção de Perda de Lead (Substituindo ou complementando a exclusão)
+            st.write("") # Pequeno espaço
+
+            # --- OPÇÃO 1: MARCAR COMO PERDIDO (Muda status para 'Perdido') ---
             with st.popover("❌ Perder", use_container_width=True):
-                st.write("Por que perdeu este lead?")
+                st.write("Motivo da perda:")
                 motivo_selecionado = st.selectbox(
-                    "Selecione o motivo:", 
+                    "Selecione:", 
                     ["Preço Alto", "Não Atendeu", "Comprou Concorrente", "Sem Interesse", "Outros"],
                     key=f"sel_motivo_{lead['id']}"
                 )
-                
                 if st.button("Confirmar Perda", key=f"btn_confirm_perda_{lead['id']}", type="primary", use_container_width=True):
-                    with st.spinner("Salvando..."):
-                        sucesso = registrar_perda_lead(lead['id'], motivo_selecionado)
-                        if sucesso:
-                            st.toast(f"Lead {lead['nome']} atualizado para Perdido!", icon="✅")
-                            # Pequena pausa para o usuário ver o toast antes do rerun
-                            import time
-                            time.sleep(0.5)
-                            st.rerun()
-                        else:
-                            st.error("Erro ao salvar no banco de dados.")
+                    if registrar_perda_lead(lead['id'], motivo_selecionado):
+                        st.toast("Lead movido para perdas!")
+                        st.rerun()
+
+            # --- OPÇÃO 2: APAGAR DEFINITIVAMENTE (Deleta do Firebase) ---
+            if st.button("🗑️ Apagar", key=f"del_definitivo_{lead['id']}", use_container_width=True, help="Remove permanentemente do banco de dados"):
+                if eliminar_documento("leads", lead['id']):
+                    st.toast("Lead removido permanentemente!")
+                    st.rerun()

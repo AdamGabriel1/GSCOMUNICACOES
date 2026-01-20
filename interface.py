@@ -39,12 +39,6 @@ def exibir_painel_admin():
             status_cor = "🔵" if user['nivel'] == 'admin' else "🟢"
             with st.expander(f"{status_cor} {user['nome']} - {user['email']}"):
                 c1, c2 = st.columns([2, 2])
-            with st.expander("Ações Avançadas"):
-                motivo = st.selectbox("Motivo da Desistência", ["Preço", "Concorrência", "Não responde", "Outros"], key=f"mot_{lead['id']}")
-                if st.button("❌ Marcar como Perdido", key=f"btn_lost_{lead['id']}"):
-                    if registrar_perda_lead(lead['id'], motivo):
-                        st.warning("Lead arquivado como perdido.")
-                        st.rerun()
                 
                 with c1:
                     st.write(f"**Nível:** {user['nivel'].upper()}")

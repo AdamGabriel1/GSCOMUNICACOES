@@ -77,16 +77,20 @@ def renderizar_card_lead(lead, status_opcoes):
             # Opção de Perda de Lead (Substituindo ou complementando a exclusão)
             with st.popover("❌ Perder", use_container_width=True):
                 st.write("Por que perdeu este lead?")
-                motivo = st.selectbox("Motivo", 
-                                    ["Preço Alto", "Não Atendeu", "Comprou Concorrente", "Sem Interesse", "Outros"],
-                                    key=f"motivo_{lead['id']}")
+                motivo_selecionado = st.selectbox(
+                    "Selecione o motivo:", 
+                    ["Preço Alto", "Não Atendeu", "Comprou Concorrente", "Sem Interesse", "Outros"],
+                    key=f"sel_motivo_{lead['id']}"
+                )
                 
-                if st.button("Confirmar Perda", key=f"btn_perda_{lead['id']}", type="primary"):
-                    if registrar_perda_lead(lead['id'], motivo):
-                        st.toast(f"Lead {lead['nome']} movido para perdas.")
-                        st.rerun()
-            
-            # Deletar (apenas para erros de digitação)
-            if st.button("🗑️ Apagar", key=f"del_{lead['id']}", use_container_width=True, help="Use apenas para erros"):
-                if eliminar_documento("leads", lead['id']):
-                    st.rerun()
+                if st.button("Confirmar Perda", key=f"btn_confirm_perda_{lead['id']}", type="primary", use_container_width=True):
+                    with st.spinner("Salvando..."):
+                        sucesso = registrar_perda_lead(lead['id'], motivo_selecionado)
+                        if sucesso:
+                            st.toast(f"Lead {lead['nome']} atualizado para Perdido!", icon="✅")
+                            # Pequena pausa para o usuário ver o toast antes do rerun
+                            import time
+                            time.sleep(0.5)
+                            st.rerun()
+                        else:
+                            st.error("Erro ao salvar no banco de dados.")

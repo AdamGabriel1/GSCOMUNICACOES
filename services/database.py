@@ -169,18 +169,21 @@ def eliminar_empresa_completa(id_empresa_doc, id_empresa_slug):
         return False
 
 def registrar_perda_lead(doc_id, motivo):
-    """
-    Em vez de deletar, marca o lead como 'Perdido' e grava o porquê.
-    """
-    url = f"{BASE_URL}/leads/{doc_id}?updateMask.fieldPaths=status,motivo_perda"
+    """Versão simplificada e mais robusta para atualizar o status e motivo"""
+    # Atualizamos o status e o motivo_perda simultaneamente
+    url = f"{BASE_URL}/leads/{doc_id}?updateMask.fieldPaths=status&updateMask.fieldPaths=motivo_perda"
+    
     payload = {
         "fields": {
             "status": {"stringValue": "Perdido"},
             "motivo_perda": {"stringValue": motivo}
         }
     }
+    
     try:
+        # Usamos PATCH para atualizar apenas esses dois campos
         res = requests.patch(url, json=payload)
         return res.status_code == 200
-    except:
+    except Exception as e:
+        print(f"Erro ao registrar perda: {e}")
         return False

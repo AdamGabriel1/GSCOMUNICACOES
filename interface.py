@@ -52,10 +52,10 @@ def exibir_painel_admin():
                     nova_senha = st.text_input("Nova Senha", type="password", key=f"pw_{user['id']}")
                     if st.button("Confirmar Nova Senha", key=f"btn_pw_{user['id']}"):
                         if nova_senha:
-                            if resetar_senha_usuario(user['id'], nova_senha):
-                                st.success("Senha atualizada!")
-                        else:
-                            st.warning("Digite uma senha válida.")
+                            from security import criptografar_senha
+                            senha_hash = criptografar_senha(nova_senha)
+                            if resetar_senha_usuario(user['id'], senha_hash):
+                                st.success("Senha atualizada com segurança!")
     else:
         st.info("Nenhum usuário encontrado.")
 def renderizar_sidebar():

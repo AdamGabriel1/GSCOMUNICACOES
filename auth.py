@@ -1,5 +1,6 @@
 import streamlit as st
 from database import buscar_documento, salvar_no_firebase
+from security import criptografar_senha, verificar_senha
 
 def gerenciar_autenticacao():
     """Controlador central de acesso e navegação entre telas de login/cadastro"""
@@ -19,16 +20,14 @@ def gerenciar_autenticacao():
 
 def tela_login():
     st.title("🔐 GS CRM - Acesso")
-    
     with st.form("form_login"):
         email = st.text_input("E-mail")
         senha = st.text_input("Senha", type="password")
-        btn_login = st.form_submit_button("Entrar", use_container_width=True)
-        
-        if btn_login:
+        if st.form_submit_button("Entrar", use_container_width=True):
             user = buscar_documento("usuarios", "email", email)
             
-            if user and user.get("senha") == senha:
+            # Aqui usamos a função de verificação
+            if user and verificar_senha(senha, user.get("senha")):
                 st.session_state.user_data = user
                 st.session_state.autenticado = True
                 st.rerun()
@@ -51,6 +50,7 @@ def tela_cadastro():
         id_empresa_pretendido = st.text_input("ID da Empresa", help="Ex: gs_telecom ou empresa_xyz")
         
         if st.form_submit_button("Verificar Empresa"):
+            senha_segura = criptografar_senha(senha)
             if not (nome and email and senha and id_empresa_pretendido):
                 st.warning("Preencha todos os campos.")
             else:
@@ -62,7 +62,7 @@ def tela_cadastro():
                     novo_user = {
                         "nome": nome,
                         "email": email,
-                        "senha": senha,
+                        "senha": senha_segura, # Salva o HASH, não a senha real
                         "empresa_id": id_empresa_pretendido.lower(),
                         "nivel": "vendedor"
                     }

@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import urllib.parse
 from datetime import datetime, timezone
-from services.database import atualizar_status_rest, eliminar_documento
+from services.database import atualizar_status_rest, eliminar_documento, registrar_perda_lead
 
 def calcular_temperatura(data_criacao_str):
     """Calcula a temperatura com base na idade do lead"""
@@ -68,10 +68,25 @@ def renderizar_card_lead(lead, status_opcoes):
                     st.rerun()
 
         with col3:
-            msg = f"Olá {lead['nome']}, aqui é da GS COMUNICAÇÕES!"
+            msg = f"Olá {lead['nome']}, aqui é da GS!"
             link_zap = f"https://wa.me/{lead['telefone']}?text={urllib.parse.quote(msg)}"
             st.markdown(f'<a href="{link_zap}" target="_blank" class="btn-zap">WHATSAPP</a>', unsafe_allow_html=True)
             
-            if st.button("🗑️ Excluir", key=f"del_{lead['id']}", use_container_width=True):
+            st.divider()
+            
+            # Opção de Perda de Lead (Substituindo ou complementando a exclusão)
+            with st.popover("❌ Perder", use_container_width=True):
+                st.write("Por que perdeu este lead?")
+                motivo = st.selectbox("Motivo", 
+                                    ["Preço Alto", "Não Atendeu", "Comprou Concorrente", "Sem Interesse", "Outros"],
+                                    key=f"motivo_{lead['id']}")
+                
+                if st.button("Confirmar Perda", key=f"btn_perda_{lead['id']}", type="primary"):
+                    if registrar_perda_lead(lead['id'], motivo):
+                        st.toast(f"Lead {lead['nome']} movido para perdas.")
+                        st.rerun()
+            
+            # Deletar (apenas para erros de digitação)
+            if st.button("🗑️ Apagar", key=f"del_{lead['id']}", use_container_width=True, help="Use apenas para erros"):
                 if eliminar_documento("leads", lead['id']):
                     st.rerun()

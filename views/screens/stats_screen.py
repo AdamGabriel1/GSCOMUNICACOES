@@ -75,6 +75,17 @@ def exibir_estatisticas():
         st.subheader("👥 Performance por Vendedor")
         st.bar_chart(df['vendedor_id'].value_counts(), color="#0ea5e9")
 
+    if "motivo_perda" in df.columns:
+        st.divider()
+        st.subheader("📉 Análise de Perdas")
+        df_perdas = df[df['status'] == 'Perdido']
+        
+        if not df_perdas.empty:
+            contagem_perdas = df_perdas['motivo_perda'].value_counts()
+            st.bar_chart(contagem_perdas, color="#ff4b4b")
+        else:
+            st.info("Nenhuma perda registada neste período.")
+
     # Opção de download dos dados filtrados
     st.divider()
     csv = df.to_csv(index=False).encode('utf-8')

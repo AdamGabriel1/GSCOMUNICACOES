@@ -167,3 +167,20 @@ def eliminar_empresa_completa(id_empresa_doc, id_empresa_slug):
     except Exception as e:
         print(f"Erro ao eliminar empresa: {e}")
         return False
+
+def registrar_perda_lead(doc_id, motivo):
+    """
+    Em vez de deletar, marca o lead como 'Perdido' e grava o porquê.
+    """
+    url = f"{BASE_URL}/leads/{doc_id}?updateMask.fieldPaths=status,motivo_perda"
+    payload = {
+        "fields": {
+            "status": {"stringValue": "Perdido"},
+            "motivo_perda": {"stringValue": motivo}
+        }
+    }
+    try:
+        res = requests.patch(url, json=payload)
+        return res.status_code == 200
+    except:
+        return False

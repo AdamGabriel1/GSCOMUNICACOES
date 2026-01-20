@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import urllib.parse
 from database import buscar_leads_filtrados, eliminar_documento, salvar_no_firebase, atualizar_status_rest
-from database import buscar_todos_usuarios, buscar_todas_empresas, eliminar_documento
+from database import buscar_todos_usuarios, buscar_todas_empresas, resetar_senha_usuario
 
 def exibir_painel_admin():
     u_logado = st.session_state.user_data
@@ -10,39 +10,54 @@ def exibir_painel_admin():
 
     # --- SEÇÃO 1: GESTÃO DE EMPRESAS (Apenas Super Admin) ---
     if u_logado['nivel'] == 'super':
-        st.subheader("🏢 Empresas Cadastradas")
+        st.subheader("🏢 Gestão de Empresas (Master)")
         empresas = buscar_todas_empresas()
+        
         if empresas:
-            df_emp = pd.DataFrame(empresas)
-            st.dataframe(df_emp[['id_empresa', 'razao', 'cnpj']], use_container_width=True)
-        else:
-            st.info("Nenhuma empresa cadastrada.")
+            for emp in empresas:
+                with st.expander(f"🏢 {emp['razao']} (ID: {emp['id_empresa']})"):
+                    col_e1, col_e2 = st.columns([3, 1])
+                    with col_e1:
+                        st.write(f"**CNPJ:** {emp.get('cnpj', 'N/A')}")
+                        st.write(f"**Contato:** {emp.get('contato', 'N/A')}")
+                    with col_e2:
+                        # Botão de Deletar Empresa
+                        if st.button("🗑️ Deletar Empresa", key=f"del_emp_{emp['id']}"):
+                            if eliminar_documento("empresas", emp['id']):
+                                st.success(f"Empresa {emp['razao']} removida!")
+                                st.rerun()
         st.divider()
 
     # --- SEÇÃO 2: GESTÃO DE FUNCIONÁRIOS ---
-    st.subheader("👥 Funcionários / Usuários")
+    st.subheader("👥 Controle de Usuários")
     usuarios = buscar_todos_usuarios(u_logado)
     
     if usuarios:
         for user in usuarios:
-            # Não permite que o admin se exclua ou veja a própria senha de forma exposta aqui
-            with st.expander(f"👤 {user['nome']} ({user['nivel'].upper()})"):
-                col1, col2 = st.columns([3, 1])
-                with col1:
-                    st.write(f"**E-mail:** {user['email']}")
-                    st.write(f"**Empresa:** {user['empresa_id']}")
-                    st.write(f"**Senha:** `{'*' * len(user['senha'])}` (Protegida)")
+            # Não permite que o admin altere a si mesmo aqui para evitar erros
+            status_cor = "🔵" if user['nivel'] == 'admin' else "🟢"
+            with st.expander(f"{status_cor} {user['nome']} - {user['email']}"):
+                c1, c2 = st.columns([2, 2])
                 
-                with col2:
-                    # Impede excluir o Super Admin principal
-                    if user['email'] != "admin@gs.com":
-                        if st.button("Remover Acesso", key=f"del_user_{user['id']}"):
-                            if eliminar_documento("usuarios", user['id']):
-                                st.success("Usuário removido!")
-                                st.rerun()
+                with c1:
+                    st.write(f"**Nível:** {user['nivel'].upper()}")
+                    st.write(f"**Empresa:** {user['empresa_id']}")
+                    if st.button("🗑️ Remover Acesso", key=f"del_u_{user['id']}"):
+                        if user['email'] != "admin@gs.com":
+                            eliminar_documento("usuarios", user['id'])
+                            st.rerun()
+                
+                with c2:
+                    st.write("**Redefinir Senha**")
+                    nova_senha = st.text_input("Nova Senha", type="password", key=f"pw_{user['id']}")
+                    if st.button("Confirmar Nova Senha", key=f"btn_pw_{user['id']}"):
+                        if nova_senha:
+                            if resetar_senha_usuario(user['id'], nova_senha):
+                                st.success("Senha atualizada!")
+                        else:
+                            st.warning("Digite uma senha válida.")
     else:
-        st.info("Nenhum funcionário cadastrado.")
-
+        st.info("Nenhum usuário encontrado.")
 def renderizar_sidebar():
     """Renderiza a barra lateral e retorna a aba selecionada"""
     u = st.session_state.user_data

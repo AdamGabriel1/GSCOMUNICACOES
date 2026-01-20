@@ -139,3 +139,31 @@ def buscar_todas_empresas():
             e['id'] = doc['name'].split('/')[-1]
             empresas.append(e)
     return empresas
+    
+def resetar_senha_usuario(user_id, nova_senha):
+    """Atualiza a senha de um usuário específico"""
+    url = f"{BASE_URL}/usuarios/{user_id}?updateMask.fieldPaths=senha"
+    payload = {
+        "fields": {
+            "senha": {"stringValue": nova_senha}
+        }
+    }
+    try:
+        res = requests.patch(url, json=payload)
+        return res.status_code == 200
+    except Exception as e:
+        print(f"Erro ao resetar senha: {e}")
+        return False
+
+def eliminar_empresa_completa(id_empresa_doc, id_empresa_slug):
+    """
+    Remove o registro da empresa. 
+    Nota: Em um sistema real, você também deletaria os leads vinculados a esse slug.
+    """
+    url = f"{BASE_URL}/empresas/{id_empresa_doc}"
+    try:
+        res = requests.delete(url)
+        return res.status_code == 200
+    except Exception as e:
+        print(f"Erro ao eliminar empresa: {e}")
+        return False

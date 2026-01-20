@@ -17,27 +17,34 @@ st.markdown("""
     /* Cores de Fundo e Layout */
     .main { background-color: #f8f9fa; }
     
-/* Estilização das Métricas (Total, Ativos, Conversão) */
+    /* Estilização das Métricas com Fundo Cinza Escuro */
     [data-testid="stMetric"] {
-        background-color: #696969;
-        border: 1px solid #e0e0e0;
-        padding: 15px 20px;
-        border-radius: 15px;
-        box-shadow: 0px 4px 12px rgba(0,0,0,0.05);
-        text-align: center;
+        background-color: #262730 !important; /* Cinza Escuro */
+        border: 1px solid #41444C !important;
+        padding: 15px 20px !important;
+        border-radius: 12px !important;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.3) !important;
     }
 
-    /* Alterar a cor do título da métrica (Label) */
+    /* Título da Métrica (Label) em cinza claro para ler no fundo escuro */
     [data-testid="stMetricLabel"] {
-        color: #64748b !important;
-        font-size: 1rem !important;
-        font-weight: 600 !important;
+        color: #B9BBC1 !important;
+        font-size: 0.9rem !important;
+        font-weight: 500 !important;
+        justify-content: center !important;
     }
 
-    /* Alterar a cor e tamanho do valor da métrica */
+    /* Valor da Métrica em Branco para alto contraste */
     [data-testid="stMetricValue"] {
-        color: #1e293b !important;
-        font-size: 2.2rem !important;
+        color: #FFFFFF !important;
+        font-size: 2rem !important;
+        text-align: center !important;
+    }
+
+    /* Centraliza o conteúdo da métrica */
+    [data-testid="stMetric"] > div {
+        width: fit-content !important;
+        margin: auto !important;
     }
     
     /* Estilização dos Cards de Leads */

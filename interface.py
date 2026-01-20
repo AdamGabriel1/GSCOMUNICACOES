@@ -203,15 +203,6 @@ def exibir_estatisticas():
     df_completo['data_criacao'] = pd.to_datetime(df_completo['data_criacao'])
     df_completo['data_dia'] = df_completo['data_criacao'].dt.date
 
-    # --- NOVO: FILTRO DE PERÍODO ---
-    col_filtro1, col_filtro2 = st.columns([1, 2])
-    with col_filtro1:
-        periodo = st.selectbox(
-            "Selecionar Período",
-            ["Hoje", "Últimos 7 Dias", "Últimos 30 Dias", "Todo o Período"],
-            index=3
-        )
-
     # Lógica do Filtro de Data
     hoje = datetime.now().date()
     if periodo == "Hoje":
@@ -240,6 +231,15 @@ def exibir_estatisticas():
     m3.metric("Conversão", f"{taxa:.1f}%")
 
     st.divider()
+    
+    # --- NOVO: FILTRO DE PERÍODO ---
+    col_filtro1, col_filtro2 = st.columns([1, 2])
+    with col_filtro1:
+        periodo = st.selectbox(
+            "Selecionar Período",
+            ["Hoje", "Últimos 7 Dias", "Últimos 30 Dias", "Todo o Período"],
+            index=3
+        )
 
     # --- GRÁFICO DE EVOLUÇÃO ---
     st.subheader(f"📅 Evolução - {periodo}")

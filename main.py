@@ -17,6 +17,29 @@ st.markdown("""
     /* Cores de Fundo e Layout */
     .main { background-color: #f8f9fa; }
     
+/* Estilização das Métricas (Total, Ativos, Conversão) */
+    [data-testid="stMetric"] {
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        padding: 15px 20px;
+        border-radius: 15px;
+        box-shadow: 0px 4px 12px rgba(0,0,0,0.05);
+        text-align: center;
+    }
+
+    /* Alterar a cor do título da métrica (Label) */
+    [data-testid="stMetricLabel"] {
+        color: #64748b !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+    }
+
+    /* Alterar a cor e tamanho do valor da métrica */
+    [data-testid="stMetricValue"] {
+        color: #1e293b !important;
+        font-size: 2.2rem !important;
+    }
+    
     /* Estilização dos Cards de Leads */
     .lead-card {
         padding: 20px;

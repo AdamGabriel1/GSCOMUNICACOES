@@ -203,18 +203,6 @@ def exibir_estatisticas():
     df_completo['data_criacao'] = pd.to_datetime(df_completo['data_criacao'])
     df_completo['data_dia'] = df_completo['data_criacao'].dt.date
 
-    # --- MÉTRICAS (Com o estilo cinza escuro do main.py) ---
-    m1, m2, m3 = st.columns(3)
-    total = len(df)
-    finalizados = len(df[df['status'] == 'Finalizado'])
-    taxa = (finalizados / total * 100) if total > 0 else 0
-    
-    m1.metric("Total de Leads", total)
-    m2.metric("Ativos", len(df[df['status'] != 'Finalizado']))
-    m3.metric("Conversão", f"{taxa:.1f}%")
-
-    st.divider()
-    
     # --- NOVO: FILTRO DE PERÍODO ---
     col_filtro1, col_filtro2 = st.columns([1, 2])
     with col_filtro1:
@@ -240,6 +228,18 @@ def exibir_estatisticas():
     if df.empty:
         st.warning(f"Não existem leads registados no período: {periodo}")
         return
+
+    # --- MÉTRICAS (Com o estilo cinza escuro do main.py) ---
+    m1, m2, m3 = st.columns(3)
+    total = len(df)
+    finalizados = len(df[df['status'] == 'Finalizado'])
+    taxa = (finalizados / total * 100) if total > 0 else 0
+    
+    m1.metric("Total de Leads", total)
+    m2.metric("Ativos", len(df[df['status'] != 'Finalizado']))
+    m3.metric("Conversão", f"{taxa:.1f}%")
+
+    st.divider()
 
     # --- GRÁFICO DE EVOLUÇÃO ---
     st.subheader(f"📅 Evolução - {periodo}")

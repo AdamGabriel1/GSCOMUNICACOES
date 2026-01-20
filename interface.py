@@ -150,12 +150,6 @@ def exibir_painel_geral():
             # Detalhes e Ações
             with st.expander("Ver Detalhes e Ações"):
                 col1, col2, col3 = st.columns([2, 1.5, 1])
-            with st.expander("Ações Avançadas"):
-                motivo = st.selectbox("Motivo da Desistência", ["Preço", "Concorrência", "Não responde", "Outros"], key=f"mot_{lead['id']}")
-                if st.button("❌ Marcar como Perdido", key=f"btn_lost_{lead['id']}"):
-                    if registrar_perda_lead(lead['id'], motivo):
-                        st.warning("Lead arquivado como perdido.")
-                        st.rerun()
                 
                 with col1:
                     st.write(f"**WhatsApp:** {lead['telefone']}")

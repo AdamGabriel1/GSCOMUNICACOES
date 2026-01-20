@@ -203,23 +203,6 @@ def exibir_estatisticas():
     df_completo['data_criacao'] = pd.to_datetime(df_completo['data_criacao'])
     df_completo['data_dia'] = df_completo['data_criacao'].dt.date
 
-    # Lógica do Filtro de Data
-    hoje = datetime.now().date()
-    if periodo == "Hoje":
-        df = df_completo[df_completo['data_dia'] == hoje]
-    elif periodo == "Últimos 7 Dias":
-        data_limite = hoje - timedelta(days=7)
-        df = df_completo[df_completo['data_dia'] >= data_limite]
-    elif periodo == "Últimos 30 Dias":
-        data_limite = hoje - timedelta(days=30)
-        df = df_completo[df_completo['data_dia'] >= data_limite]
-    else:
-        df = df_completo
-
-    if df.empty:
-        st.warning(f"Não existem leads registados no período: {periodo}")
-        return
-
     # --- MÉTRICAS (Com o estilo cinza escuro do main.py) ---
     m1, m2, m3 = st.columns(3)
     total = len(df)
@@ -240,6 +223,23 @@ def exibir_estatisticas():
             ["Hoje", "Últimos 7 Dias", "Últimos 30 Dias", "Todo o Período"],
             index=3
         )
+
+    # Lógica do Filtro de Data
+    hoje = datetime.now().date()
+    if periodo == "Hoje":
+        df = df_completo[df_completo['data_dia'] == hoje]
+    elif periodo == "Últimos 7 Dias":
+        data_limite = hoje - timedelta(days=7)
+        df = df_completo[df_completo['data_dia'] >= data_limite]
+    elif periodo == "Últimos 30 Dias":
+        data_limite = hoje - timedelta(days=30)
+        df = df_completo[df_completo['data_dia'] >= data_limite]
+    else:
+        df = df_completo
+
+    if df.empty:
+        st.warning(f"Não existem leads registados no período: {periodo}")
+        return
 
     # --- GRÁFICO DE EVOLUÇÃO ---
     st.subheader(f"📅 Evolução - {periodo}")

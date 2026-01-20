@@ -1,6 +1,6 @@
 import streamlit as st
 from services.database import buscar_leads_filtrados
-from views.components.cards import renderizar_card_lead
+from views.components.cards import renderizar_card_lead, calcular_temperatura # Importamos a função de cálculo
 
 def exibir_painel_geral():
     st.header("📋 Gestão de Atendimentos")
@@ -11,17 +11,39 @@ def exibir_painel_geral():
         st.info("Nenhum lead encontrado para o seu acesso.")
         return
 
-    # Filtros Superiores
-    c_f1, c_f2 = st.columns([2, 1])
-    with c_f1:
-        busca = st.text_input("🔍 Buscar por nome...", placeholder="Digite para filtrar...")
-    with c_f2:
-        status_opcoes = ["Pendente", "Em Negociação", "Urgente", "Finalizado"]
-        filtro_status = st.multiselect("Filtrar Status", status_opcoes, default=["Pendente", "Em Negociação", "Urgente"])
+    # --- NOVO: FILTROS INTELIGENTES ---
+    with st.container():
+        c_f1, c_f2, c_f3 = st.columns([2, 1, 1])
+        
+        with c_f1:
+            busca = st.text_input("🔍 Buscar por nome...", placeholder="Digite para filtrar...")
+        
+        with c_f2:
+            status_opcoes = ["Pendente", "Em Negociação", "Urgente", "Finalizado"]
+            filtro_status = st.multiselect("Status", status_opcoes, default=["Pendente", "Em Negociação", "Urgente"])
+        
+        with c_f3:
+            # Filtro por Temperatura
+            temp_opcoes = ["Todos", "🔥 Quente", "🌤️ Morno", "❄️ Gelado"]
+            filtro_temp = st.selectbox("Temperatura", temp_opcoes)
 
     st.divider()
 
+    # --- MÉTRICAS RÁPIDAS (OPCIONAL) ---
+    # Mostra quantos leads estão "Gelados" e precisam de atenção
+    leads_gelados = [l for l in leads if "Gelado" in calcular_temperatura(l.get('data_criacao'))[0]]
+    if leads_gelados and filtro_temp == "Todos":
+        st.warning(f"⚠️ Você tem {len(leads_gelados)} leads **Gelados** precisando de atenção!")
+
+    # --- LOOP DE RENDERIZAÇÃO ---
     for lead in leads:
-        if lead['status'] in filtro_status and (busca.lower() in lead['nome'].lower()):
-            # Aqui chamamos o componente isolado
+        # 1. Lógica de Filtro de Status e Nome
+        match_status = lead['status'] in filtro_status
+        match_nome = busca.lower() in lead['nome'].lower()
+        
+        # 2. Lógica de Filtro de Temperatura
+        label_temp, _ = calcular_temperatura(lead.get('data_criacao'))
+        match_temp = (filtro_temp == "Todos") or (filtro_temp in label_temp)
+
+        if match_status and match_nome and match_temp:
             renderizar_card_lead(lead, status_opcoes)

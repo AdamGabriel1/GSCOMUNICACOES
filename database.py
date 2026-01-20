@@ -167,14 +167,3 @@ def eliminar_empresa_completa(id_empresa_doc, id_empresa_slug):
     except Exception as e:
         print(f"Erro ao eliminar empresa: {e}")
         return False
-        
-def registrar_perda_lead(doc_id, motivo):
-    """Atualiza o lead para status 'Perdido' e grava o motivo"""
-    url = f"{BASE_URL}/leads/{doc_id}?updateMask.fieldPaths=status,motivo_perda"
-    payload = {
-        "fields": {
-            "status": {"stringValue": "Perdido"},
-            "motivo_perda": {"stringValue": motivo}
-        }
-    }
-    return requests.patch(url, json=payload).status_code == 200

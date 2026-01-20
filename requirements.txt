@@ -3,4 +3,3 @@ firebase-admin
 google-cloud-firestore
 proto-plus
 pandas
-plotly

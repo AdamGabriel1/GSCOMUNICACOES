@@ -9,7 +9,8 @@ from services.database import (
     atualizar_status_rest,
     buscar_todos_usuarios, 
     buscar_todas_empresas, 
-    resetar_senha_usuario
+    resetar_senha_usuario,
+    eliminar_empresa_completa
 )
 
 def exibir_painel_admin():
@@ -31,10 +32,11 @@ def exibir_painel_admin():
                     with col_e2:
                         # Botão de Deletar Empresa
                         if st.button("🗑️ Deletar Empresa", key=f"del_emp_{emp['id']}"):
-                            if eliminar_documento("empresas", emp['id']):
-                                st.success(f"Empresa {emp['razao']} removida!")
+                            # Passamos o ID interno do documento e o slug (id_empresa)
+                            if eliminar_empresa_completa(emp['id'], emp['id_empresa']):
+                                st.success(f"Empresa {emp['razao']} removida com sucesso!")
                                 st.rerun()
-        st.divider()
+                                st.divider()
 
     # --- SEÇÃO 2: GESTÃO DE FUNCIONÁRIOS ---
     st.subheader("👥 Controle de Usuários")

@@ -1,6 +1,6 @@
 import streamlit as st
-from database import buscar_documento, salvar_no_firebase
-from security import criptografar_senha, verificar_senha
+from services.database import buscar_documento, salvar_no_firebase
+from core.security import criptografar_senha, verificar_senha
 
 def gerenciar_autenticacao():
     """Controlador central de acesso e navegação entre telas de login/cadastro"""

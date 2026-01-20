@@ -1,6 +1,6 @@
 import streamlit as st
-from auth import gerenciar_autenticacao
-from interface import renderizar_sidebar, exibir_painel_geral, exibir_novo_lead, exibir_estatisticas
+from core.auth import gerenciar_autenticacao
+from views.interface import renderizar_sidebar, exibir_painel_geral, exibir_novo_lead, exibir_estatisticas
 
 # --- 1. CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(

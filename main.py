@@ -1,30 +1,33 @@
 import streamlit as st
-import requests
-import pandas as pd
-from datetime import datetime, timezone
-import urllib.parse
-import io
+from auth import gerenciar_autenticacao
+from interface import renderizar_sidebar, exibir_painel_geral, exibir_novo_lead, exibir_estatisticas
 
-# --- CONFIGURAÇÃO INICIAL ---
-PROJECT_ID = "gscomunicacoes-91512" 
-BASE_URL = f"https://firestore.googleapis.com/v1/projects/{PROJECT_ID}/databases/(default)/documents/leads"
+# --- 1. CONFIGURAÇÃO DA PÁGINA ---
+st.set_page_config(
+    page_title="GS COMUNICAÇÕES | CRM Multi-Empresa",
+    page_icon="📞",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-st.set_page_config(page_title="GS COMUNICAÇÕES | CRM", page_icon="📞", layout="wide")
-
-# --- ESTILIZAÇÃO CSS ---
+# --- 2. ESTILIZAÇÃO CSS GLOBAL ---
+# Aqui definimos as cores dos cards e botões que a interface.py vai usar
 st.markdown("""
     <style>
-    .main { background-color: #f0f2f6; }
+    /* Cores de Fundo e Layout */
+    .main { background-color: #f8f9fa; }
     
-    /* Base do Card */
+    /* Estilização dos Cards de Leads */
     .lead-card {
-        padding: 15px 20px;
+        padding: 20px;
         border-radius: 12px;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
         border-left: 10px solid #ccc;
-        box-shadow: 0px 4px 6px rgba(0,0,0,0.05);
-        color: #1e293b; /* Cor do texto */
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
+        color: #1e293b;
+        transition: transform 0.2s;
     }
+    .lead-card:hover { transform: translateY(-2px); }
 
     /* Estilização por Status - Fundo e Borda */
     .status-urgente { 
@@ -43,234 +46,62 @@ st.markdown("""
         background-color: #f0fdf4 !important; 
         border-left-color: #22c55e !important; 
     }
-
+    
     /* Ajuste do Título e Status dentro do Card */
     .lead-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 2px; }
     .lead-status { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
     
     .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
+
+    /* Botão customizado para WhatsApp */
     .btn-zap {
-        background-color: #25D366; color: white !important; padding: 10px;
-        border-radius: 8px; text-decoration: none; font-weight: bold;
-        display: flex; align-items: center; justify-content: center; width: 100%;
-        transition: 0.3s; margin-bottom: 5px;
+        background-color: #25D366;
+        color: white !important;
+        padding: 10px 15px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: bold;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        text-align: center;
+        transition: 0.3s;
     }
     .btn-zap:hover { background-color: #128C7E; transform: scale(1.02); }
+
+    /* Ajuste de métricas */
+    [data-testid="stMetricValue"] { font-size: 1.8rem; font-weight: 700; color: #1e293b; }
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONFIGURAÇÃO DE SESSÃO (LOGIN) ---
+# --- 3. INICIALIZAÇÃO DO ESTADO DA SESSÃO ---
 if "autenticado" not in st.session_state:
     st.session_state.autenticado = False
-    st.session_state.usuario = None
+if "user_data" not in st.session_state:
+    st.session_state.user_data = None
+if "tela" not in st.session_state:
+    st.session_state.tela = "login"
 
-# --- FUNÇÃO DE LOGIN (EXEMPLO VIA FIRESTORE) ---
-def realizar_login(email, senha):
-    # Aqui você faria uma busca na coleção "usuarios" do Firestore
-    # Por enquanto, usaremos um validador simples para teste:
-    if email == "admin@gs.com" and senha == "123":
-        st.session_state.autenticado = True
-        st.session_state.usuario = {
-            "nome": "Adam",
-            "nivel": "admin",
-            "empresa_id": "gs_comunicacoes",
-            "id": "vendedor_01"
-        }
-        return True
-    return False
+# --- 4. FLUXO DE AUTENTICAÇÃO ---
+# Chama o auth.py. Se não estiver logado, ele trava o app na tela de login/cadastro.
+gerenciar_autenticacao()
 
-# --- INTERFACE DE LOGIN ---
-if not st.session_state.autenticado:
-    st.title("🔐 Acesso ao CRM GS")
-    with st.form("login"):
-        email = st.text_input("E-mail")
-        senha = st.text_input("Senha", type="password")
-        if st.form_submit_button("Entrar"):
-            if realizar_login(email, senha):
-                st.rerun()
-            else:
-                st.error("Usuário ou senha inválidos")
-    st.stop() # Interrompe o código aqui se não estiver logado
+# --- 5. INTERFACE DO USUÁRIO (SÓ EXECUTA SE LOGADO) ---
+if st.session_state.autenticado:
+    # Renderiza a Sidebar e captura qual aba o usuário clicou
+    aba_selecionada = renderizar_sidebar()
 
-# --- SE CHEGOU AQUI, ESTÁ LOGADO ---
-u = st.session_state.usuario
+    # Roteamento das Abas (chama funções da interface.py)
+    if aba_selecionada == "📊 Painel Geral":
+        exibir_painel_geral()
+        
+    elif aba_selecionada == "➕ Novo Lead":
+        exibir_novo_lead()
+        
+    elif aba_selecionada == "📈 Estatísticas":
+        exibir_estatisticas()
 
-# --- FILTRAGEM DE DADOS POR USUÁRIO ---
-def buscar_dados_filtrados():
-    todos_dados = buscar_dados_rest() # Sua função original
-    
-    df = pd.DataFrame(todos_dados)
-    if df.empty: return []
-
-    # Se for VENDEDOR, filtra apenas os dele
-    if u['nivel'] == 'vendedor':
-        return df[df['vendedor_id'] == u['id']].to_dict('records')
-    
-    # Se for ADMIN da empresa, vê tudo da empresa dele
-    elif u['nivel'] == 'admin':
-        return df[df['empresa_id'] == u['empresa_id']].to_dict('records')
-    
-    return todos_dados
-
-# --- FUNÇÕES DE COMUNICAÇÃO (REST) ---
-def buscar_dados_rest():
-    try:
-        response = requests.get(BASE_URL)
-        if response.status_code == 200:
-            data = response.json()
-            leads = []
-            if 'documents' in data:
-                for doc in data['documents']:
-                    f = doc.get('fields', {})
-                    leads.append({
-                        "id": doc['name'].split('/')[-1],
-                        "nome": f.get('nome', {}).get('stringValue', 'Sem nome'),
-                        "telefone": f.get('telefone', {}).get('stringValue', ''),
-                        "status": f.get('status', {}).get('stringValue', 'Pendente'),
-                        "obs": f.get('obs', {}).get('stringValue', ''),
-                        "data_criacao": f.get('data_criacao', {}).get('timestampValue', '')
-                    })
-            return leads
-        return []
-    except: return []
-
-def salvar_lead_rest(nome, telefone, status, obs):
-    data_utc = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    payload = {"fields": {
-        "nome": {"stringValue": nome},
-        "telefone": {"stringValue": telefone.replace(" ", "").replace("-", "")},
-        "status": {"stringValue": status},
-        "obs": {"stringValue": obs},
-        "data_criacao": {"timestampValue": data_utc}
-    }}
-    return requests.post(BASE_URL, json=payload).status_code == 200
-
-def atualizar_status_rest(doc_id, novo_status):
-    url = f"{BASE_URL}/{doc_id}?updateMask.fieldPaths=status"
-    payload = {"fields": {"status": {"stringValue": novo_status}}}
-    return requests.patch(url, json=payload).status_code == 200
-
-def eliminar_lead_rest(doc_id):
-    return requests.delete(f"{BASE_URL}/{doc_id}").status_code == 200
-
-def gerar_link_whatsapp(telefone, nome_cliente):
-    texto = f"Olá {nome_cliente}, aqui é da GS COMUNICAÇÕES! Como podemos ajudar hoje?"
-    return f"https://wa.me/{telefone}?text={urllib.parse.quote(texto)}"
-
-# --- SIDEBAR ---
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/5968/5968841.png", width=60)
-st.sidebar.title("CRM GS")
-aba = st.sidebar.radio("Navegação", ["📊 Painel Geral", "➕ Novo Lead", "📈 Estatísticas"])
-
-# --- ABA: NOVO LEAD ---
-if aba == "➕ Novo Lead":
-    st.header("🚀 Cadastrar Novo Lead")
-    with st.form("cadastro_form", clear_on_submit=True):
-        c1, c2 = st.columns(2)
-        nome = c1.text_input("Nome do Cliente")
-        tel = c2.text_input("WhatsApp (DDD + Número)")
-        status = st.selectbox("Status Inicial", ["Pendente", "Em Negociação", "Urgente"])
-        obs = st.text_area("Observações")
-        if st.form_submit_button("✅ Salvar Cliente"):
-            if nome and tel:
-                if salvar_lead_rest(nome, tel, status, obs):
-                    st.success("Lead cadastrado!")
-                    st.balloons()
-                else: st.error("Erro ao salvar no Firebase.")
-            else: st.warning("Preencha Nome e Telefone.")
-
-# --- ABA: PAINEL GERAL ---
-elif aba == "📊 Painel Geral":
-    st.header("📋 Gestão de Atendimento")
-    dados = buscar_dados_rest()
-    
-    if dados:
-        # Barra superior de filtros
-        col_f1, col_f2 = st.columns([2, 1])
-        with col_f1:
-            busca = st.text_input("🔍 Buscar por nome...", placeholder="Digite o nome do cliente")
-        with col_f2:
-            status_filtro = st.multiselect("Filtrar Status", ["Pendente", "Em Negociação", "Urgente", "Finalizado"], default=["Pendente", "Em Negociação", "Urgente"])
-
-        st.markdown("---")
-
-        for lead in dados:
-            # Lógica de Filtro
-            # --- Dentro do loop de leads no Painel Geral ---
-            if lead['status'] in status_filtro and (busca.lower() in lead['nome'].lower()):
-                
-                # Define a classe CSS baseada no status
-                classes = {
-                    "Urgente": "status-urgente",
-                    "Em Negociação": "status-negociacao",
-                    "Finalizado": "status-finalizado",
-                    "Pendente": "status-pendente"
-                }
-                classe_atual = classes.get(lead['status'], "status-pendente")
-                icone = "🔥" if lead['status'] == "Urgente" else "👤"
-
-                # Renderiza o Card Colorido
-                st.markdown(f"""
-                    <div class="lead-card {classe_atual}">
-                        <div class="lead-title">{icone} {lead['nome']}</div>
-                        <div class="lead-status">{lead['status']}</div>
-                    </div>
-                """, unsafe_allow_html=True)
-
-                # O expander vem logo abaixo para as ações
-                with st.expander("Ver detalhes e gerenciar"):
-                    c1, c2, c3 = st.columns([2, 1.5, 1])
-                    
-                    with c1:
-                        st.write(f"**WhatsApp:** {lead['telefone']}")
-                        st.write(f"**Obs:** {lead['obs']}")
-                        data_pt = pd.to_datetime(lead['data_criacao']).strftime('%d/%m/%Y %H:%M')
-                        st.caption(f"📅 {data_pt}")
-
-                    with c2:
-                        novo_st = st.selectbox("Mudar Status", ["Pendente", "Em Negociação", "Urgente", "Finalizado"], 
-                                             index=["Pendente", "Em Negociação", "Urgente", "Finalizado"].index(lead['status']),
-                                             key=f"up_{lead['id']}")
-                        if novo_st != lead['status']:
-                            if atualizar_status_rest(lead['id'], novo_st):
-                                st.rerun()
-
-                    with c3:
-                        st.markdown(f'<a href="{gerar_link_whatsapp(lead["telefone"], lead["nome"])}" target="_blank" class="btn-zap">WHATSAPP</a>', unsafe_allow_html=True)
-                        if st.button("🗑️ Excluir", key=f"del_{lead['id']}", use_container_width=True):
-                            if eliminar_lead_rest(lead['id']): st.rerun()
-
-# --- ABA: ESTATÍSTICAS ---
-elif aba == "📈 Estatísticas":
-    st.header("📈 Relatórios e Exportação")
-    dados = buscar_dados_rest()
-    
-    if dados:
-        df = pd.DataFrame(dados)
-        df['data_criacao'] = pd.to_datetime(df['data_criacao'], errors='coerce')
-        df['data_dia'] = df['data_criacao'].dt.date
-        df = df.sort_values('data_criacao', ascending=False)
-
-        # Métricas
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total", len(df))
-        m2.metric("🔥 Urgente", len(df[df['status'] == 'Urgente']))
-        m3.metric("🤝 Negociando", len(df[df['status'] == 'Em Negociação']))
-        m4.metric("✅ Finalizados", len(df[df['status'] == 'Finalizado']))
-
-        # Gráficos
-        g1, g2 = st.columns(2)
-        with g1:
-            st.subheader("Funil de Vendas")
-            st.bar_chart(df['status'].value_counts(), color="#25D366")
-        with g2:
-            st.subheader("Leads por Dia")
-            st.line_chart(df.groupby('data_dia').size(), color="#128C7E")
-
-        # Exportação
-        st.markdown("---")
-        st.subheader("💾 Exportar Dados")
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button(label="📥 Baixar Planilha CSV", data=csv, file_name=f'leads_gs_{datetime.now().date()}.csv', mime='text/csv')
-    else:
-        st.warning("Sem dados.")
+    # Rodapé discreto
+    st.sidebar.markdown("---")
+    st.sidebar.caption("© 2026 GS COMUNICAÇÕES - CRM v2.0")

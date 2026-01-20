@@ -19,7 +19,7 @@ st.markdown("""
     
 /* Estilização das Métricas (Total, Ativos, Conversão) */
     [data-testid="stMetric"] {
-        background-color: #ffffff;
+        background-color: #696969;
         border: 1px solid #e0e0e0;
         padding: 15px 20px;
         border-radius: 15px;

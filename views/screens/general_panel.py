@@ -1,6 +1,6 @@
 import streamlit as st
 from services.database import buscar_leads_filtrados
-from views.components.cards import renderizar_card_lead, calcular_temperatura # Importamos a função de cálculo
+from views.components.cards import renderizar_card_lead, calcular_temperatura
 
 def exibir_painel_geral():
     st.header("📋 Gestão de Atendimentos")
@@ -11,7 +11,7 @@ def exibir_painel_geral():
         st.info("Nenhum lead encontrado para o seu acesso.")
         return
 
-    # --- NOVO: FILTROS INTELIGENTES ---
+    # --- FILTROS INTELIGENTES ---
     with st.container():
         c_f1, c_f2, c_f3 = st.columns([2, 1, 1])
         
@@ -19,14 +19,15 @@ def exibir_painel_geral():
             busca = st.text_input("🔍 Buscar por nome...", placeholder="Digite para filtrar...")
         
         with c_f2:
-            status_opcoes = ["Pendente", "Em Negociação", "Urgente", "Finalizado"]
+            # Adicionado "Perdido" à lista de opções
+            status_opcoes = ["Pendente", "Em Negociação", "Urgente", "Finalizado", "Perdido"]
+            # O default continua sendo apenas os ativos para manter o foco
             filtro_status = st.multiselect("Status", status_opcoes, default=["Pendente", "Em Negociação", "Urgente"])
         
         with c_f3:
-            # Filtro por Temperatura
             temp_opcoes = ["Todos", "🔥 Quente", "🌤️ Morno", "❄️ Gelado"]
             filtro_temp = st.selectbox("Temperatura", temp_opcoes)
-
+    
     st.divider()
 
     # --- MÉTRICAS RÁPIDAS (OPCIONAL) ---

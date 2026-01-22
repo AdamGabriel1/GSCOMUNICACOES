@@ -46,41 +46,50 @@ st.markdown("""
         width: fit-content !important;
         margin: auto !important;
     }
-    
-    /* Estilização dos Cards de Leads */
+    /* Estilização dos Cards de Leads - Tema Dark Profissional */
     .lead-card {
         padding: 20px;
         border-radius: 12px;
         margin-bottom: 12px;
+        /* Fundo escuro padrão para todos os cards */
+        background-color: #1e293b !important; 
+        border: 1px solid #334155;
         border-left: 10px solid #ccc;
-        box-shadow: 0px 4px 10px rgba(0,0,0,0.05);
-        color: #1e293b;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.3);
+        color: #f1f5f9 !important; /* Texto claro para leitura no escuro */
         transition: transform 0.2s;
     }
-    .lead-card:hover { transform: translateY(-2px); }
+    .lead-card:hover { transform: translateY(-2px); border-color: #475569; }
 
-    /* Estilização por Status - Fundo e Borda */
+    /* Cores das Bordas Laterais por Status (Mantendo o fundo escuro) */
     .status-urgente { 
-        background-color: #ffebee !important; 
         border-left-color: #ef4444 !important; 
+        background: linear-gradient(90deg, #2d1a1a 0%, #1e293b 100%) !important;
     }
     .status-negociacao { 
-        background-color: #fff7ed !important; 
         border-left-color: #f59e0b !important; 
+        background: linear-gradient(90deg, #2d241a 0%, #1e293b 100%) !important;
     }
     .status-pendente { 
-        background-color: #f0f9ff !important; 
         border-left-color: #0ea5e9 !important; 
+        background: linear-gradient(90deg, #1a252d 0%, #1e293b 100%) !important;
     }
     .status-finalizado { 
-        background-color: #f0fdf4 !important; 
         border-left-color: #22c55e !important; 
+        background: linear-gradient(90deg, #1a2d1e 0%, #1e293b 100%) !important;
     }
     
-    /* Ajuste do Título e Status dentro do Card */
-    .lead-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 2px; }
-    .lead-status { font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
-    
+    /* Status "Perdido" (Cinza mais opaco) */
+    .status-perdido {
+        border-left-color: #64748b !important;
+        opacity: 0.8;
+    }
+
+    /* Ajuste de contraste para textos dentro do card */
+    .lead-card div, .lead-card span {
+        color: #f1f5f9 !important;
+    }
+
     .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; box-shadow: 2px 2px 5px rgba(0,0,0,0.1); }
 
     /* Botão customizado para WhatsApp */

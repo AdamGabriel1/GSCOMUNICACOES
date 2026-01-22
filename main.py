@@ -65,7 +65,7 @@ st.markdown("""
         border-left-color: #ef4444 !important; 
     }
     .status-negociacao { 
-        background-color: #4d2c04 !important; 
+        background-color: #fff7ed !important; 
         border-left-color: #f59e0b !important; 
     }
     .status-pendente { 

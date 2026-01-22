@@ -30,7 +30,8 @@ def renderizar_card_lead(lead, status_opcoes):
     cor_classe = {
         "Urgente": "status-urgente",
         "Em Negociação": "status-negociacao",
-        "Finalizado": "status-finalizado"
+        "Finalizado": "status-finalizado",
+        "Perdido": "status-perdido"  # Adicione esta linha
     }.get(lead['status'], "status-pendente")
 
     # Renderização visual com a temperatura

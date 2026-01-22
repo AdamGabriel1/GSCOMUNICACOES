@@ -50,7 +50,7 @@ def tela_cadastro():
         id_empresa_pretendido = st.text_input("ID da Empresa", help="Ex: gs_telecom ou empresa_xyz")
         
         if st.form_submit_button("Verificar Empresa"):
-            senha_segura = criptografar_senha(senha)
+            senha_hash = criptografar_senha(senha)
             if not (nome and email and senha and id_empresa_pretendido):
                 st.warning("Preencha todos os campos.")
             else:
@@ -62,7 +62,7 @@ def tela_cadastro():
                     novo_user = {
                         "nome": nome,
                         "email": email,
-                        "senha": senha_segura, # Salva o HASH, não a senha real
+                        "senha": senha_hash, # Salva o HASH, não a senha real
                         "empresa_id": id_empresa_pretendido.lower(),
                         "nivel": "vendedor"
                     }
@@ -106,11 +106,14 @@ def tela_cadastro_empresa():
                 }
                 salvar_no_firebase("empresas", dados_empresa)
                 
+                # Criptografamos a senha antes de salvar o administrador
+                senha_hash = criptografar_senha(temp_u['senha'])
+                
                 # 2. Salva o Usuário como ADMIN daquela empresa
                 novo_admin = {
                     "nome": temp_u['nome'],
                     "email": temp_u['email'],
-                    "senha": temp_u['senha'],
+                    "senha": senha_hash, # Agora salvando o HASH
                     "empresa_id": temp_u['id_empresa'],
                     "nivel": "admin"
                 }
